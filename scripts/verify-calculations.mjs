@@ -23,7 +23,7 @@ const quickRent = calculate('rent', { base: 1600, months: 12, utilities: 900, pa
 assert.equal(quickRent.summary.effectiveMonthly, 1600, 'Quick rent must use only visible Quick Check inputs');
 
 const fullRent = calculate('rent', { base: 1600, months: 12, utilities: 180, parking: 100, internet: 65, other: 45, insurance: 18, commute: 120, movein: 650, deposit: 1600 }, 'full');
-close(fullRent.summary.effectiveMonthly, 2178.17);
+close(fullRent.summary.effectiveMonthly, 2182.17);
 
 const quickJob = calculate('job', { asalary: 80000, abonus: 5000, abenefits: 999999, acommute: 999999, bsalary: 92000, bbonus: 3000, bbenefits: 1, bcommute: 1 }, 'quick');
 assert.equal(quickJob.summary.aValue, 85000);
