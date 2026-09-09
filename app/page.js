@@ -1,22 +1,154 @@
 'use client';
-import {useMemo,useState} from 'react';
 
-const tools=[['🚗','Car Purchase','car'],['🏠','Home Buying','home'],['☀️','Solar','solar'],['💳','Loan','loan'],['🛋️','Big Purchase','purchase'],['🏢','Rent','rent'],['💼','Job Offer','job']];
-const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number.isFinite(n)?n:0);
-const payment=(P,apr,n)=>{if(!P||!n)return 0;const r=apr/1200;return r===0?P/n:P*r/(1-Math.pow(1+r,-n))};
-const N=v=>Number(v)||0;
-function Field({label,value,set,prefix='',suffix='',hide=false}){if(hide)return null;return <label className="field"><span>{label}</span><div className="input">{prefix&&<b>{prefix}</b>}<input value={value} onChange={e=>set(e.target.value)}/>{suffix&&<b>{suffix}</b>}</div></label>}
-function Stat({label,value}){return <div className="stat"><small>{label}</small><b>{value}</b></div>}
-function Actions({save,showSaved}){return <div className="actions"><button className="primary" onClick={save}>Save Check</button><button onClick={()=>window.print()}>Export Report</button><button onClick={showSaved}>Compare Saved</button></div>}
-export default function Page(){const[active,setActive]=useState(null),[mode,setMode]=useState('quick'),[saved,setSaved]=useState([]);const save=x=>{let old=[];try{old=JSON.parse(localStorage.getItem('cf_saved')||'[]')}catch{}const next=[{id:Date.now(),...x},...old].slice(0,20);localStorage.setItem('cf_saved',JSON.stringify(next));setSaved(next)};return <main><nav><div className="nav"><button className="brand" onClick={()=>setActive(null)}><i>✓</i>CheckFirst</button><div><button className="ghost" onClick={()=>{try{setSaved(JSON.parse(localStorage.getItem('cf_saved')||'[]'))}catch{}setActive('saved')}}>Saved Checks</button><button className="primary" onClick={()=>setActive(null)}>Start a Free Check →</button></div></div></nav>{active==='saved'?<Saved items={saved} back={()=>setActive(null)}/>:active?<Workspace type={active} mode={mode} setMode={setMode} back={()=>setActive(null)} save={save} showSaved={()=>{try{setSaved(JSON.parse(localStorage.getItem('cf_saved')||'[]'))}catch{}setActive('saved')}}/>:<Home open={t=>{setMode('quick');setActive(t)}}/>}<footer>CheckFirst is an educational planning tool. Estimates only. Not legal, tax, lending, insurance, investment, or professional advice.</footer></main>}
-function Home({open}){return <><section className="hero"><div><div className="eyebrow">CHECK BEFORE YOU COMMIT</div><h1>Understand the <em>real cost</em> before you sign.</h1><p>Cars, homes, solar, loans, financed purchases, apartments and job offers. Change the numbers and see the impact instantly.</p><div className="pills"><span>✓ Free checks</span><span>⚡ Live results</span><span>🔒 No account required</span></div></div><div className="visual"><div className="float a"><small>Car financing</small><b>$10,109</b><i>estimated interest</i></div><div className="float b"><small>Solar quote</small><b>$11,900</b><i>cash vs financed gap</i></div><div className="float c"><small>Apartment</small><b>$2,046/mo</b><i>effective cost</i></div></div></section><section className="section"><div className="center"><div className="eyebrow">WHAT ARE YOU CHECKING?</div><h2>Choose the decision in front of you.</h2><p>Start with a 60-second Quick Check or switch to Full Check for more context.</p></div><div className="cards">{tools.map(t=><article key={t[2]}><div className="icon">{t[0]}</div><h3>{t[1]}</h3><p>See the monthly cost, total cost and important details before you commit.</p><button onClick={()=>open(t[2])}>Open check →</button></article>)}</div><div className="trust"><div><b>Transparent math</b><p>See the numbers behind the result.</p></div><div><b>Quick or Full</b><p>Start simple, then add more context.</p></div><div><b>Save and compare</b><p>Keep scenarios on your device.</p></div><div><b>You decide</b><p>The tool informs; it does not make the decision.</p></div></div></section></>}
-function Workspace({type,mode,setMode,back,save,showSaved}){const title=tools.find(x=>x[2]===type)?.[1];return <section className="workspace"><div className="head"><div><div className="eyebrow">CHECKFIRST REPORT</div><h2>{title}</h2></div><button className="ghost" onClick={back}>← All Checks</button></div><div className="modes"><button className={mode==='quick'?'on':''} onClick={()=>setMode('quick')}>Quick Check · ~60 sec</button><button className={mode==='full'?'on':''} onClick={()=>setMode('full')}>Full Check · deeper report</button></div>{type==='car'?<Car mode={mode} save={save} showSaved={showSaved}/>:type==='home'?<HomeBuy mode={mode} save={save} showSaved={showSaved}/>:type==='solar'?<Solar mode={mode} save={save} showSaved={showSaved}/>:type==='loan'?<Loan mode={mode} save={save} showSaved={showSaved}/>:type==='purchase'?<Purchase mode={mode} save={save} showSaved={showSaved}/>:type==='rent'?<Rent mode={mode} save={save} showSaved={showSaved}/>:<Job mode={mode} save={save} showSaved={showSaved}/>}</section>}
-function Layout({left,right}){return <div className="work"><div className="panel">{left}</div><div className="panel">{right}</div></div>}
-function Car({mode,save,showSaved}){const[v,setV]=useState({price:'32995',apr:'8.4',term:'72',down:'3000',trade:'8000',owed:'5400',tax:'7',fees:'699',addons:'1495',insurance:'175',fuel:'160',maint:'75',year:'2022',make:'Toyota',model:'Camry',miles:'48500'});const s=k=>x=>setV({...v,[k]:x});const r=useMemo(()=>{const p=N(v.price),tax=p*N(v.tax)/100,neg=Math.max(0,N(v.owed)-N(v.trade)),pos=Math.max(0,N(v.trade)-N(v.owed)),otd=p+tax+N(v.fees)+N(v.addons),fin=Math.max(0,otd-N(v.down)-pos+neg),mo=payment(fin,N(v.apr),N(v.term)),total=mo*N(v.term),interest=total-fin,own=mo+N(v.insurance)+N(v.fuel)+N(v.maint);return{otd,fin,mo,total,interest,own,neg,pos}},[v]);return <Layout left={<><h3>Enter the vehicle and deal</h3><div className="grid"><Field label="Vehicle price" value={v.price} set={s('price')} prefix="$"/><Field label="APR" value={v.apr} set={s('apr')} suffix="%"/><Field label="Term" value={v.term} set={s('term')} suffix="months"/><Field label="Down payment" value={v.down} set={s('down')} prefix="$"/><Field label="Trade value" value={v.trade} set={s('trade')} prefix="$"/><Field label="Amount owed" value={v.owed} set={s('owed')} prefix="$"/><Field hide={mode==='quick'} label="Year" value={v.year} set={s('year')}/><Field hide={mode==='quick'} label="Make" value={v.make} set={s('make')}/><Field hide={mode==='quick'} label="Model" value={v.model} set={s('model')}/><Field hide={mode==='quick'} label="Mileage" value={v.miles} set={s('miles')} suffix="miles"/><Field hide={mode==='quick'} label="Sales tax" value={v.tax} set={s('tax')} suffix="%"/><Field hide={mode==='quick'} label="Dealer fees" value={v.fees} set={s('fees')} prefix="$"/><Field hide={mode==='quick'} label="Add-ons" value={v.addons} set={s('addons')} prefix="$"/><Field hide={mode==='quick'} label="Insurance / month" value={v.insurance} set={s('insurance')} prefix="$"/><Field hide={mode==='quick'} label="Fuel / month" value={v.fuel} set={s('fuel')} prefix="$"/><Field hide={mode==='quick'} label="Maintenance / month" value={v.maint} set={s('maint')} prefix="$"/></div></>} right={<><div className="result"><small>ESTIMATED LOAN PAYMENT</small><strong>{money(r.mo)}/mo</strong><p>{mode==='full'?`${v.year} ${v.make} ${v.model} · ${Number(v.miles||0).toLocaleString()} miles`:'Quick financing view'}</p></div><div className="stats"><Stat label="Out-the-door" value={money(r.otd)}/><Stat label="Amount financed" value={money(r.fin)}/><Stat label="Total payments" value={money(r.total)}/><Stat label="Interest" value={money(r.interest)}/><Stat label="Ownership / month" value={money(r.own)+'/mo'}/><Stat label="Trade position" value={r.neg?money(r.neg)+' negative':money(r.pos)+' positive'}/></div><Actions save={()=>save({type:'Car',label:`${v.year} ${v.make} ${v.model}`,summary:r})} showSaved={showSaved}/></>}/>}
-function HomeBuy({mode,save,showSaved}){const[v,setV]=useState({price:'425000',down:'85000',apr:'6.4',years:'30',tax:'5200',ins:'1800',hoa:'150',maint:'350',closing:'12000',utilities:'300'});const s=k=>x=>setV({...v,[k]:x});const r=useMemo(()=>{const P=Math.max(0,N(v.price)-N(v.down)),pm=payment(P,N(v.apr),N(v.years)*12),ti=(N(v.tax)+N(v.ins))/12,other=N(v.hoa)+N(v.maint)+N(v.utilities);return{pm,P,interest:pm*N(v.years)*12-P,monthly:pm+ti+other,cash:N(v.down)+N(v.closing),ti,other}},[v]);return <Layout left={<><h3>Enter the home purchase</h3><div className="grid"><Field label="Home price" value={v.price} set={s('price')} prefix="$"/><Field label="Down payment" value={v.down} set={s('down')} prefix="$"/><Field label="APR" value={v.apr} set={s('apr')} suffix="%"/><Field label="Term" value={v.years} set={s('years')} suffix="years"/><Field hide={mode==='quick'} label="Property tax / year" value={v.tax} set={s('tax')} prefix="$"/><Field hide={mode==='quick'} label="Insurance / year" value={v.ins} set={s('ins')} prefix="$"/><Field hide={mode==='quick'} label="HOA / month" value={v.hoa} set={s('hoa')} prefix="$"/><Field hide={mode==='quick'} label="Maintenance / month" value={v.maint} set={s('maint')} prefix="$"/><Field hide={mode==='quick'} label="Closing costs" value={v.closing} set={s('closing')} prefix="$"/><Field hide={mode==='quick'} label="Utilities / month" value={v.utilities} set={s('utilities')} prefix="$"/></div></>} right={<><div className="result"><small>ESTIMATED MONTHLY HOUSING COST</small><strong>{money(r.monthly)}/mo</strong></div><div className="stats"><Stat label="Mortgage" value={money(r.pm)}/><Stat label="Loan amount" value={money(r.P)}/><Stat label="Interest" value={money(r.interest)}/><Stat label="Cash up front" value={money(r.cash)}/><Stat label="Tax + insurance" value={money(r.ti)+'/mo'}/><Stat label="Other monthly" value={money(r.other)}/></div><Actions save={()=>save({type:'Home',label:money(N(v.price)),summary:r})} showSaved={showSaved}/></>}/>}
-function Solar({mode,save,showSaved}){const[v,setV]=useState({cash:'27900',fin:'39800',apr:'4.99',years:'25',roof:'14'});const s=k=>x=>setV({...v,[k]:x});const r=useMemo(()=>{const mo=payment(N(v.fin),N(v.apr),N(v.years)*12),total=mo*N(v.years)*12;return{mo,total,interest:total-N(v.fin),gap:N(v.fin)-N(v.cash)}},[v]);return <Layout left={<><h3>Enter the solar offer</h3><div className="grid"><Field label="Cash price" value={v.cash} set={s('cash')} prefix="$"/><Field label="Financed price" value={v.fin} set={s('fin')} prefix="$"/><Field label="APR" value={v.apr} set={s('apr')} suffix="%"/><Field label="Loan term" value={v.years} set={s('years')} suffix="years"/><Field hide={mode==='quick'} label="Roof age" value={v.roof} set={s('roof')} suffix="years"/></div></>} right={<><div className="result"><small>FINANCED PRICE</small><strong>{money(N(v.fin))}</strong><p>{money(r.gap)} above entered cash price</p></div><div className="stats"><Stat label="Payment" value={money(r.mo)+'/mo'}/><Stat label="Total payments" value={money(r.total)}/><Stat label="Interest" value={money(r.interest)}/><Stat label="Cash vs financed gap" value={money(r.gap)}/></div><Actions save={()=>save({type:'Solar',label:money(N(v.fin)),summary:r})} showSaved={showSaved}/></>}/>}
-function Loan({mode,save,showSaved}){const[v,setV]=useState({amount:'20000',apr:'11.5',term:'60',fees:'800'});const s=k=>x=>setV({...v,[k]:x});const r=useMemo(()=>{const mo=payment(N(v.amount),N(v.apr),N(v.term)),total=mo*N(v.term)+N(v.fees);return{mo,total,interest:mo*N(v.term)-N(v.amount),above:total-N(v.amount)}},[v]);return <Layout left={<><h3>Enter the loan</h3><div className="grid"><Field label="Amount borrowed" value={v.amount} set={s('amount')} prefix="$"/><Field label="APR" value={v.apr} set={s('apr')} suffix="%"/><Field label="Term" value={v.term} set={s('term')} suffix="months"/><Field hide={mode==='quick'} label="Fees" value={v.fees} set={s('fees')} prefix="$"/></div></>} right={<><div className="result"><small>ESTIMATED PAYMENT</small><strong>{money(r.mo)}/mo</strong></div><div className="stats"><Stat label="Total repayment" value={money(r.total)}/><Stat label="Interest" value={money(r.interest)}/><Stat label="Cost above principal" value={money(r.above)}/></div><Actions save={()=>save({type:'Loan',label:money(N(v.amount)),summary:r})} showSaved={showSaved}/></>}/>}
-function Purchase({mode,save,showSaved}){const[v,setV]=useState({cash:'4200',fin:'4850',apr:'14.9',term:'48',delivery:'250',protection:'400'});const s=k=>x=>setV({...v,[k]:x});const r=useMemo(()=>{const mo=payment(N(v.fin),N(v.apr),N(v.term)),extras=N(v.delivery)+N(v.protection),total=mo*N(v.term)+extras;return{mo,total,interest:mo*N(v.term)-N(v.fin),extras,above:total-N(v.cash)}},[v]);return <Layout left={<><h3>Enter the purchase</h3><div className="grid"><Field label="Cash price" value={v.cash} set={s('cash')} prefix="$"/><Field label="Financed amount" value={v.fin} set={s('fin')} prefix="$"/><Field label="APR" value={v.apr} set={s('apr')} suffix="%"/><Field label="Term" value={v.term} set={s('term')} suffix="months"/><Field hide={mode==='quick'} label="Delivery/setup" value={v.delivery} set={s('delivery')} prefix="$"/><Field hide={mode==='quick'} label="Protection plan" value={v.protection} set={s('protection')} prefix="$"/></div></>} right={<><div className="result"><small>ESTIMATED PAYMENT</small><strong>{money(r.mo)}/mo</strong></div><div className="stats"><Stat label="Total paid" value={money(r.total)}/><Stat label="Interest" value={money(r.interest)}/><Stat label="Extras" value={money(r.extras)}/><Stat label="Above cash price" value={money(r.above)}/></div><Actions save={()=>save({type:'Purchase',label:money(N(v.cash)),summary:r})} showSaved={showSaved}/></>}/>}
-function Rent({mode,save,showSaved}){const[v,setV]=useState({base:'1600',months:'12',utilities:'180',parking:'100',internet:'65',other:'45',insurance:'18',movein:'650',deposit:'1600',commute:'120'});const s=k=>x=>setV({...v,[k]:x});const r=useMemo(()=>{const extras=N(v.utilities)+N(v.parking)+N(v.internet)+N(v.other)+N(v.insurance)+N(v.commute),monthly=N(v.base)+extras+N(v.movein)/Math.max(1,N(v.months));return{monthly,extras,annual:monthly*12,cash:N(v.base)+N(v.movein)+N(v.deposit)}},[v]);return <Layout left={<><h3>Enter the apartment</h3><div className="grid"><Field label="Base rent" value={v.base} set={s('base')} prefix="$"/><Field label="Lease length" value={v.months} set={s('months')} suffix="months"/><Field hide={mode==='quick'} label="Utilities" value={v.utilities} set={s('utilities')} prefix="$"/><Field hide={mode==='quick'} label="Parking" value={v.parking} set={s('parking')} prefix="$"/><Field hide={mode==='quick'} label="Internet" value={v.internet} set={s('internet')} prefix="$"/><Field hide={mode==='quick'} label="Other fees" value={v.other} set={s('other')} prefix="$"/><Field hide={mode==='quick'} label="Insurance" value={v.insurance} set={s('insurance')} prefix="$"/><Field hide={mode==='quick'} label="Move-in fees" value={v.movein} set={s('movein')} prefix="$"/><Field hide={mode==='quick'} label="Deposit" value={v.deposit} set={s('deposit')} prefix="$"/><Field hide={mode==='quick'} label="Commute / month" value={v.commute} set={s('commute')} prefix="$"/></div></>} right={<><div className="result"><small>EFFECTIVE MONTHLY COST</small><strong>{money(r.monthly)}/mo</strong></div><div className="stats"><Stat label="Base rent" value={money(N(v.base))}/><Stat label="Recurring extras" value={money(r.extras)}/><Stat label="Annual cost" value={money(r.annual)}/><Stat label="Move-in cash" value={money(r.cash)}/></div><Actions save={()=>save({type:'Rent',label:money(N(v.base))+'/mo',summary:r})} showSaved={showSaved}/></>}/>}
-function Job({mode,save,showSaved}){const[a,setA]=useState({salary:'80000',bonus:'5000',benefits:'9200',cost:'2400',pto:'15',hours:'5'}),[b,setB]=useState({salary:'92000',bonus:'3000',benefits:'7000',cost:'6200',pto:'12',hours:'10'});const s=(o,set,k)=>x=>set({...o,[k]:x});const r=useMemo(()=>{const c=o=>({value:N(o.salary)+N(o.bonus)+N(o.benefits)-N(o.cost),pto:N(o.pto)*(N(o.salary)/260),hours:N(o.hours)*48});const A=c(a),B=c(b);return{A,B,diff:B.value-A.value}},[a,b]);const fields=(o,set,p)=><div className="grid"><Field label="Salary" value={o.salary} set={s(o,set,'salary')} prefix="$"/><Field label="Bonus" value={o.bonus} set={s(o,set,'bonus')} prefix="$"/><Field hide={mode==='quick'} label="Benefits value" value={o.benefits} set={s(o,set,'benefits')} prefix="$"/><Field hide={mode==='quick'} label="Commute cost / yr" value={o.cost} set={s(o,set,'cost')} prefix="$"/><Field hide={mode==='quick'} label="PTO days" value={o.pto} set={s(o,set,'pto')}/><Field hide={mode==='quick'} label="Commute hours / week" value={o.hours} set={s(o,set,'hours')}/></div>;return <Layout left={<><h3>Offer A</h3>{fields(a,setA,'a')}<h3 className="space">Offer B</h3>{fields(b,setB,'b')}</>} right={<><div className="result"><small>ENTERED ANNUAL VALUE DIFFERENCE</small><strong>{money(Math.abs(r.diff))}</strong><p>{r.diff>=0?'Offer B':'Offer A'} has the higher entered annual value.</p></div><div className="stats"><Stat label="Offer A value" value={money(r.A.value)}/><Stat label="Offer B value" value={money(r.B.value)}/><Stat label="A commute hours / yr" value={Math.round(r.A.hours)+' hrs'}/><Stat label="B commute hours / yr" value={Math.round(r.B.hours)+' hrs'}/><Stat label="A PTO value" value={money(r.A.pto)}/><Stat label="B PTO value" value={money(r.B.pto)}/></div><Actions save={()=>save({type:'Job',label:money(N(a.salary))+' vs '+money(N(b.salary)),summary:r})} showSaved={showSaved}/></>}/>}
-function Saved({items,back}){const groups={};items.forEach(x=>(groups[x.type]??=[]).push(x));const pair=Object.entries(groups).find(([,v])=>v.length>=2);return <section className="workspace"><div className="head"><div><div className="eyebrow">SAVED CHECKS</div><h2>Recent checks on this device</h2></div><button className="ghost" onClick={back}>← Home</button></div><div className="panel">{items.length?items.map(x=><div className="saved" key={x.id}><b>{x.type}: {x.label}</b><small>{new Date(x.id).toLocaleString()}</small></div>):<p className="muted">No saved checks yet.</p>}</div>{pair&&<div className="panel compare"><h3>{pair[0]} comparison</h3><p>Two recent {pair[0].toLowerCase()} checks are saved and ready for comparison.</p></div>}</section>}
+import { useEffect, useMemo, useState } from 'react';
+
+const money = (n) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(n) ? n : 0);
+
+const num = (v) => {
+  const n = Number(String(v ?? '').replace(/[$,%\s,]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+};
+
+const payment = (principal, apr, months) => {
+  if (principal <= 0 || months <= 0) return 0;
+  const rate = apr / 1200;
+  if (rate === 0) return principal / months;
+  return (principal * rate) / (1 - Math.pow(1 + rate, -months));
+};
+
+const TOOL_CONFIGS = {
+  car: {
+    icon: '🚗',
+    title: 'Car Purchase',
+    description: 'Vehicle price, financing, trade equity and ownership costs.',
+    defaults: { price: '32995', apr: '8.4', term: '72', down: '3000', trade: '8000', owed: '5400', tax: '7', fees: '699', addons: '1495', insurance: '175', fuel: '160', maint: '75', year: '2022', make: 'Toyota', model: 'Camry', miles: '48500' },
+    fields: [
+      ['Vehicle price','price','$','',false],['APR','apr','','%',false],['Loan term','term','',' months',false],['Down payment','down','$','',false],['Trade value','trade','$','',false],['Amount owed','owed','$','',false],
+      ['Year','year','','',true],['Make','make','','',true],['Model','model','','',true],['Mileage','miles','',' miles',true],['Sales tax','tax','','%',true],['Dealer fees','fees','$','',true],['Add-ons','addons','$','',true],['Insurance / month','insurance','$','',true],['Fuel / month','fuel','$','',true],['Maintenance / month','maint','$','',true]
+    ],
+  },
+  home: {
+    icon: '🏠', title: 'Home Buying', description: 'Mortgage, taxes, insurance, closing costs and monthly carrying costs.',
+    defaults: { price:'425000', down:'85000', apr:'6.4', years:'30', tax:'5200', insurance:'1800', hoa:'150', maint:'350', closing:'12000', utilities:'300' },
+    fields: [['Home price','price','$','',false],['Down payment','down','$','',false],['APR','apr','','%',false],['Term','years','',' years',false],['Property tax / year','tax','$','',true],['Insurance / year','insurance','$','',true],['HOA / month','hoa','$','',true],['Maintenance / month','maint','$','',true],['Closing costs','closing','$','',true],['Utilities / month','utilities','$','',true]],
+  },
+  solar: {
+    icon:'☀️', title:'Solar', description:'Cash price versus financed price and long-term loan cost.',
+    defaults:{ cash:'27900', financed:'39800', apr:'4.99', years:'25', roof:'14', electric:'210' },
+    fields:[['Cash price','cash','$','',false],['Financed price','financed','$','',false],['APR','apr','','%',false],['Loan term','years','',' years',false],['Roof age','roof','',' years',true],['Electric bill / month','electric','$','',true]],
+  },
+  loan: {
+    icon:'💳', title:'Loan', description:'APR, fees, monthly payment and total repayment.',
+    defaults:{ amount:'20000', apr:'11.5', term:'60', fees:'800' },
+    fields:[['Amount borrowed','amount','$','',false],['APR','apr','','%',false],['Term','term','',' months',false],['Fees','fees','$','',true]],
+  },
+  purchase: {
+    icon:'🛋️', title:'Big Purchase', description:'Furniture, appliances, electronics and store financing.',
+    defaults:{ cash:'4200', financed:'4850', apr:'14.9', term:'48', delivery:'250', protection:'400' },
+    fields:[['Cash price','cash','$','',false],['Financed amount','financed','$','',false],['APR','apr','','%',false],['Term','term','',' months',false],['Delivery/setup','delivery','$','',true],['Protection plan','protection','$','',true]],
+  },
+  rent: {
+    icon:'🏢', title:'Rent', description:'Base rent, recurring fees, move-in cash and commute cost.',
+    defaults:{ base:'1600', months:'12', utilities:'180', parking:'100', internet:'65', other:'45', insurance:'18', movein:'650', deposit:'1600', commute:'120' },
+    fields:[['Base rent','base','$','',false],['Lease length','months','',' months',false],['Utilities','utilities','$','',true],['Parking','parking','$','',true],['Internet','internet','$','',true],['Other fees','other','$','',true],['Insurance','insurance','$','',true],['Move-in fees','movein','$','',true],['Deposit','deposit','$','',true],['Commute / month','commute','$','',true]],
+  },
+  job: {
+    icon:'💼', title:'Job Offer', description:'Compare salary, bonus, benefits, commute and PTO.',
+    defaults:{ asalary:'80000', abonus:'5000', abenefits:'9200', acommute:'2400', apto:'15', ahours:'5', bsalary:'92000', bbonus:'3000', bbenefits:'7000', bcommute:'6200', bpto:'12', bhours:'10' },
+    fields:[['Offer A salary','asalary','$','',false],['Offer A bonus','abonus','$','',false],['Offer B salary','bsalary','$','',false],['Offer B bonus','bbonus','$','',false],['Offer A benefits','abenefits','$','',true],['Offer A commute / year','acommute','$','',true],['Offer A PTO days','apto','','',true],['Offer A commute hrs / week','ahours','',' hrs',true],['Offer B benefits','bbenefits','$','',true],['Offer B commute / year','bcommute','$','',true],['Offer B PTO days','bpto','','',true],['Offer B commute hrs / week','bhours','',' hrs',true]],
+  },
+};
+
+function calculate(type, v) {
+  if (type === 'car') {
+    const price=num(v.price), tax=price*num(v.tax)/100, neg=Math.max(0,num(v.owed)-num(v.trade)), pos=Math.max(0,num(v.trade)-num(v.owed));
+    const otd=price+tax+num(v.fees)+num(v.addons), financed=Math.max(0,otd-num(v.down)-pos+neg), monthly=payment(financed,num(v.apr),num(v.term)), total=monthly*num(v.term), interest=total-financed;
+    return { primary:`${money(monthly)}/mo`, stats:[['Out-the-door',money(otd)],['Amount financed',money(financed)],['Total payments',money(total)],['Interest',money(interest)],['Ownership / month',`${money(monthly+num(v.insurance)+num(v.fuel)+num(v.maint))}/mo`],['Trade position',neg?`${money(neg)} negative`:`${money(pos)} positive`]], summary:{monthly,total,interest,financed}, warnings:[...(num(v.term)>=72?['Long loan term increases total interest.']:[]),...(num(v.addons)>0?[`${money(num(v.addons))} in add-ons entered.`]:[]),...(neg>0?[`${money(neg)} of negative equity is rolled forward.`]:[])] };
+  }
+  if (type === 'home') {
+    const principal=Math.max(0,num(v.price)-num(v.down)), mortgage=payment(principal,num(v.apr),num(v.years)*12), interest=mortgage*num(v.years)*12-principal, taxIns=(num(v.tax)+num(v.insurance))/12, other=num(v.hoa)+num(v.maint)+num(v.utilities), monthly=mortgage+taxIns+other, cash=num(v.down)+num(v.closing);
+    return { primary:`${money(monthly)}/mo`, stats:[['Mortgage',money(mortgage)],['Loan amount',money(principal)],['Mortgage interest',money(interest)],['Cash up front',money(cash)],['Tax + insurance',`${money(taxIns)}/mo`],['Other monthly',money(other)]], summary:{monthly,interest,cash}, warnings:[] };
+  }
+  if (type === 'solar') {
+    const monthly=payment(num(v.financed),num(v.apr),num(v.years)*12), total=monthly*num(v.years)*12, interest=total-num(v.financed), gap=num(v.financed)-num(v.cash);
+    const warnings=[]; if(num(v.cash)>0&&gap>num(v.cash)*.15)warnings.push('Financed price is more than 15% above the entered cash price.'); if(num(v.years)>=20)warnings.push('This is a very long financing term.'); if(num(v.roof)>=12)warnings.push('Roof age may matter if panels need removal for future roof work.');
+    return { primary:money(num(v.financed)), subtitle:`${money(gap)} above entered cash price`, stats:[['Payment',`${money(monthly)}/mo`],['Total payments',money(total)],['Interest',money(interest)],['Cash vs financed gap',money(gap)]], summary:{monthly,total,interest,gap}, warnings };
+  }
+  if (type === 'loan') {
+    const monthly=payment(num(v.amount),num(v.apr),num(v.term)), total=monthly*num(v.term)+num(v.fees), interest=monthly*num(v.term)-num(v.amount);
+    return { primary:`${money(monthly)}/mo`, stats:[['Total repayment',money(total)],['Interest',money(interest)],['Fees',money(num(v.fees))],['Cost above principal',money(total-num(v.amount))]], summary:{monthly,total,interest}, warnings:num(v.apr)>15?['The entered APR is above 15%.']:[] };
+  }
+  if (type === 'purchase') {
+    const monthly=payment(num(v.financed),num(v.apr),num(v.term)), extras=num(v.delivery)+num(v.protection), total=monthly*num(v.term)+extras, interest=monthly*num(v.term)-num(v.financed), above=total-num(v.cash);
+    return { primary:`${money(monthly)}/mo`, stats:[['Cash price',money(num(v.cash))],['Total paid',money(total)],['Interest',money(interest)],['Extras',money(extras)],['Above cash price',money(above)]], summary:{monthly,total,above}, warnings:num(v.cash)>0&&above>num(v.cash)*.25?['Total entered cost is more than 25% above the cash price.']:[] };
+  }
+  if (type === 'rent') {
+    const extras=num(v.utilities)+num(v.parking)+num(v.internet)+num(v.other)+num(v.insurance)+num(v.commute), months=Math.max(1,num(v.months)), effective=num(v.base)+extras+num(v.movein)/months, cash=num(v.base)+num(v.movein)+num(v.deposit);
+    return { primary:`${money(effective)}/mo`, stats:[['Base rent',money(num(v.base))],['Recurring extras',money(extras)],['Annual cost',money(effective*12)],['Move-in cash',money(cash)],['Deposit',money(num(v.deposit))]], summary:{monthly:effective,annual:effective*12,cash}, warnings:[] };
+  }
+  const A=num(v.asalary)+num(v.abonus)+num(v.abenefits)-num(v.acommute), B=num(v.bsalary)+num(v.bbonus)+num(v.bbenefits)-num(v.bcommute), diff=B-A;
+  return { primary:money(Math.abs(diff)), subtitle:`${diff>=0?'Offer B':'Offer A'} has the higher entered annual value.`, stats:[['Offer A value',money(A)],['Offer B value',money(B)],['A commute hours / year',`${Math.round(num(v.ahours)*48)} hrs`],['B commute hours / year',`${Math.round(num(v.bhours)*48)} hrs`],['A PTO value',money(num(v.apto)*(num(v.asalary)/260))],['B PTO value',money(num(v.bpto)*(num(v.bsalary)/260))]], summary:{difference:diff,A,B}, warnings:['Salary is only one part of a job offer; benefits, commute and time also matter.'] };
+}
+
+function Field({ spec, value, setValue, mode }) {
+  const [label,key,prefix,suffix,fullOnly]=spec;
+  if (fullOnly && mode === 'quick') return null;
+  return <label className="field"><span>{label}</span><div className="input">{prefix&&<b>{prefix}</b>}<input value={value} onChange={e=>setValue(key,e.target.value)} />{suffix&&<b>{suffix}</b>}</div></label>;
+}
+
+function Stat({ label, value }) { return <div className="stat"><small>{label}</small><b>{value}</b></div>; }
+
+export default function Page() {
+  const [mounted,setMounted]=useState(false);
+  const [active,setActive]=useState(null);
+  const [mode,setMode]=useState('quick');
+  const [saved,setSaved]=useState([]);
+
+  useEffect(()=>{
+    setMounted(true);
+    try { setSaved(JSON.parse(window.localStorage.getItem('cf_saved') || '[]')); } catch { setSaved([]); }
+  },[]);
+
+  const persist = (item) => {
+    const next=[{id:Date.now(),time:new Date().toLocaleString(),...item},...saved].slice(0,20);
+    setSaved(next);
+    try { window.localStorage.setItem('cf_saved',JSON.stringify(next)); } catch {}
+  };
+
+  const removeSaved = (id) => {
+    const next=saved.filter(x=>x.id!==id); setSaved(next);
+    try { window.localStorage.setItem('cf_saved',JSON.stringify(next)); } catch {}
+  };
+
+  if (!mounted) return <main><div className="section"><div className="center"><div className="eyebrow">CHECKFIRST</div><h2>Loading…</h2></div></div></main>;
+
+  return <main>
+    <nav><div className="nav"><button className="brand" onClick={()=>setActive(null)}><i>✓</i>CheckFirst</button><div><button className="ghost" onClick={()=>setActive('saved')}>Saved Checks</button><button className="primary" onClick={()=>setActive(null)}>Start a Free Check →</button></div></div></nav>
+    {active==='saved' ? <Saved items={saved} remove={removeSaved} back={()=>setActive(null)} /> : active ? <Tool type={active} mode={mode} setMode={setMode} save={persist} saved={()=>setActive('saved')} back={()=>setActive(null)} /> : <Home open={t=>{setMode('quick');setActive(t)}} />}
+    <footer>CheckFirst is an educational planning tool. Estimates only. Not legal, tax, lending, insurance, investment, or professional advice.</footer>
+  </main>;
+}
+
+function Home({ open }) {
+  return <><section className="hero"><div><div className="eyebrow">CHECK BEFORE YOU COMMIT</div><h1>Understand the <em>real cost</em> before you sign.</h1><p>Cars, homes, solar, loans, financed purchases, apartments and job offers. Change the numbers and see the impact instantly.</p><div className="pills"><span>✓ Free checks</span><span>⚡ Live results</span><span>🔒 No account required</span></div></div><div className="visual"><div className="float a"><small>Car financing</small><b>$10,109</b><i>estimated interest</i></div><div className="float b"><small>Solar quote</small><b>$11,900</b><i>cash vs financed gap</i></div><div className="float c"><small>Apartment</small><b>$2,046/mo</b><i>effective cost</i></div></div></section><section className="section"><div className="center"><div className="eyebrow">WHAT ARE YOU CHECKING?</div><h2>Choose the decision in front of you.</h2><p>Start with a 60-second Quick Check or switch to Full Check for more context.</p></div><div className="cards">{Object.entries(TOOL_CONFIGS).map(([id,t])=><article key={id}><div className="icon">{t.icon}</div><h3>{t.title}</h3><p>{t.description}</p><button onClick={()=>open(id)}>Open check →</button></article>)}</div><div className="trust"><div><b>Transparent math</b><p>See the numbers behind the result.</p></div><div><b>Quick or Full</b><p>Start simple, then add more context.</p></div><div><b>Save and compare</b><p>Keep scenarios on your device.</p></div><div><b>You decide</b><p>The tool informs; it does not make the decision.</p></div></div></section></>;
+}
+
+function Tool({ type, mode, setMode, save, saved, back }) {
+  const config=TOOL_CONFIGS[type];
+  const [v,setV]=useState(config.defaults);
+  useEffect(()=>setV(config.defaults),[type]);
+  const result=useMemo(()=>calculate(type,v),[type,v]);
+  const setValue=(key,value)=>setV(prev=>({...prev,[key]:value}));
+  return <section className="workspace"><div className="head"><div><div className="eyebrow">CHECKFIRST REPORT</div><h2>{config.title}</h2><p>{config.description}</p></div><button className="ghost" onClick={back}>← All Checks</button></div><div className="modes"><button className={mode==='quick'?'on':''} onClick={()=>setMode('quick')}>Quick Check · ~60 sec</button><button className={mode==='full'?'on':''} onClick={()=>setMode('full')}>Full Check · deeper report</button></div><div className="work"><div className="panel"><h3>Enter the details</h3><div className="grid">{config.fields.map(spec=><Field key={spec[1]} spec={spec} value={v[spec[1]]} setValue={setValue} mode={mode} />)}</div></div><div className="panel"><div className="result"><small>CHECKFIRST RESULT</small><strong>{result.primary}</strong>{result.subtitle&&<p>{result.subtitle}</p>}</div><div className="stats">{result.stats.map(([label,value])=><Stat key={label} label={label} value={value} />)}</div>{result.warnings.length>0&&<div className="flags">{result.warnings.map((w,i)=><div className="flag" key={i}><b>Worth checking</b><p>{w}</p></div>)}</div>}<div className="actions"><button className="primary" onClick={()=>save({type:config.title,label:config.title,summary:result.summary})}>Save Check</button><button onClick={()=>window.print()}>Export Report</button><button onClick={saved}>Compare Saved</button></div></div></div></section>;
+}
+
+function Saved({ items, remove, back }) {
+  const groups={}; items.forEach(item=>{(groups[item.type]??=[]).push(item)});
+  const pair=Object.values(groups).find(group=>group.length>=2);
+  return <section className="workspace"><div className="head"><div><div className="eyebrow">SAVED CHECKS</div><h2>Recent checks</h2><p>Saved only on this browser for now.</p></div><button className="ghost" onClick={back}>← Home</button></div><div className="panel">{items.length===0?<p>No saved checks yet.</p>:items.map(item=><div className="row" key={item.id}><div><b>{item.type}</b><small>{item.time}</small></div><button className="ghost" onClick={()=>remove(item.id)}>Delete</button></div>)}</div><div className="panel" style={{marginTop:16}}><h3>Comparison</h3>{pair?<div className="stats">{Object.keys(pair[0].summary||{}).filter(k=>typeof pair[0].summary[k]==='number'&&typeof pair[1].summary?.[k]==='number').map(k=><div className="stat" key={k}><small>{k}</small><b>{money(pair[0].summary[k])}</b><small>vs</small><b>{money(pair[1].summary[k])}</b></div>)}</div>:<p>Save two checks of the same type to compare them here.</p>}</div></section>;
+}
